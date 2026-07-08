@@ -191,6 +191,13 @@ app.post("/capturar-orden-paypal/:orderID", async (req, res) => {
 async function enviarEmailGracias(destinatario, claveProducto = "proveedor") {
   const producto = obtenerProducto(claveProducto);
 
+  // Número del proveedor y mensaje que aparecerá ya escrito al abrir el chat.
+  const numeroProveedor = "8613159459186"; // +86 131 5945 9186, sin "+" ni espacios
+  const mensajePrecargado = encodeURIComponent(
+    "Hola buenas, vengo de parte de Jonathan, me gustaría comprar algún producto."
+  );
+  const enlaceWhatsapp = `https://wa.me/${numeroProveedor}?text=${mensajePrecargado}`;
+
   const bloqueGuia = producto.incluyeGuia
     ? `
       <div style="background:#eef6f0; border-radius:10px; padding:18px; margin:20px 0;">
@@ -204,21 +211,23 @@ async function enviarEmailGracias(destinatario, claveProducto = "proveedor") {
   const html = `
     <div style="font-family:Arial,sans-serif; max-width:520px; margin:auto; color:#222;">
       <h2 style="color:#c07a1f;">¡Gracias por tu compra!</h2>
-      <p>Ya tienes acceso a <b>${producto.nombre}</b>. Aquí tienes el contacto
-      directo del proveedor para que empieces a pedir cuando quieras, ya sea
-      por unidades o al por mayor:</p>
+      <p>Ya tienes acceso a <b>${producto.nombre}</b>. Pulsa el botón de abajo
+      para hablar directamente con el proveedor por WhatsApp — el mensaje ya
+      viene escrito, solo tienes que enviarlo:</p>
 
-      <div style="background:#f6f2ea; border-radius:10px; padding:18px; margin:20px 0;">
-        <p style="margin:0 0 6px;"><b>Persona de contacto:</b> [NOMBRE DEL CONTACTO]</p>
-        <p style="margin:0 0 6px;"><b>Email:</b> [EMAIL DEL PROVEEDOR]</p>
-        <p style="margin:0 0 6px;"><b>WhatsApp:</b> [TELÉFONO DEL PROVEEDOR]</p>
-        <p style="margin:0;"><b>Catálogo:</b> [ENLACE AL CATÁLOGO]</p>
+      <div style="text-align:center; margin:28px 0;">
+        <a href="${enlaceWhatsapp}"
+           style="display:inline-block; background:#25D366; color:#ffffff;
+                  text-decoration:none; font-weight:bold; font-size:15px;
+                  padding:14px 28px; border-radius:8px;">
+          💬 Hablar con el proveedor por WhatsApp
+        </a>
       </div>
 
       ${bloqueGuia}
 
-      <p>Si tienes cualquier duda con el pedido o el proveedor no responde,
-      escríbeme directamente respondiendo a este correo.</p>
+      <p>Si tienes cualquier duda con el pedido, escríbeme directamente
+      respondiendo a este correo.</p>
 
       <p style="margin-top:28px;">Un saludo,<br>[TU NOMBRE]</p>
     </div>
