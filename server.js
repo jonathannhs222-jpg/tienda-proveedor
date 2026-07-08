@@ -62,20 +62,30 @@ app.use(cors());
 app.use(express.json());
 
 // ---------- CONFIGURACIÓN DE PRODUCTOS ----------
-// Dos opciones: solo el acceso al proveedor, o el pack con la guía de reventa.
+// Tres opciones: solo proveedor, solo guía, o el pack con las dos cosas.
 const PRODUCTOS = {
   proveedor: {
     nombre: "Proveedor Zapatillas China — Acceso Directo",
     descripcion: "Catálogo, tarifas mayorista/unidad y contacto directo del proveedor",
     precioCentimos: 1700, // 17,00 €
     moneda: "eur",
+    incluyeProveedor: true,
     incluyeGuia: false,
+  },
+  guia: {
+    nombre: "Guía de Reventa de Zapatillas",
+    descripcion: "Guía completa paso a paso para revender con margen",
+    precioCentimos: 1400, // 14,00 €
+    moneda: "eur",
+    incluyeProveedor: false,
+    incluyeGuia: true,
   },
   pack: {
     nombre: "Proveedor Zapatillas China + Guía de Reventa",
     descripcion: "Todo lo del acceso al proveedor, más la guía completa para revender con margen",
     precioCentimos: 2700, // 27,00 €
     moneda: "eur",
+    incluyeProveedor: true,
     incluyeGuia: true,
   },
 };
@@ -198,6 +208,19 @@ async function enviarEmailGracias(destinatario, claveProducto = "proveedor") {
   );
   const enlaceWhatsapp = `https://wa.me/${numeroProveedor}?text=${mensajePrecargado}`;
 
+  const bloqueProveedor = producto.incluyeProveedor
+    ? `
+      <div style="text-align:center; margin:28px 0;">
+        <a href="${enlaceWhatsapp}"
+           style="display:inline-block; background:#25D366; color:#ffffff;
+                  text-decoration:none; font-weight:bold; font-size:15px;
+                  padding:14px 28px; border-radius:8px;">
+          💬 Hablar con el proveedor por WhatsApp
+        </a>
+      </div>
+    `
+    : "";
+
   const bloqueGuia = producto.incluyeGuia
     ? `
       <div style="background:#eef6f0; border-radius:10px; padding:18px; margin:20px 0;">
@@ -208,26 +231,19 @@ async function enviarEmailGracias(destinatario, claveProducto = "proveedor") {
     `
     : "";
 
+  const intro = producto.incluyeProveedor
+    ? "Pulsa el botón de abajo para hablar directamente con el proveedor por WhatsApp — el mensaje ya viene escrito, solo tienes que enviarlo:"
+    : "Aquí tienes todo lo incluido en tu compra:";
+
   const html = `
     <div style="font-family:Arial,sans-serif; max-width:520px; margin:auto; color:#222;">
       <h2 style="color:#c07a1f;">¡Gracias por tu compra!</h2>
-      <p>Ya tienes acceso a <b>${producto.nombre}</b>. Pulsa el botón de abajo
-      para hablar directamente con el proveedor por WhatsApp — el mensaje ya
-      viene escrito, solo tienes que enviarlo:</p>
+      <p>Ya tienes acceso a <b>${producto.nombre}</b>. ${intro}</p>
 
-      <div style="text-align:center; margin:28px 0;">
-        <a href="${enlaceWhatsapp}"
-           style="display:inline-block; background:#25D366; color:#ffffff;
-                  text-decoration:none; font-weight:bold; font-size:15px;
-                  padding:14px 28px; border-radius:8px;">
-          💬 Hablar con el proveedor por WhatsApp
-        </a>
-      </div>
-
+      ${bloqueProveedor}
       ${bloqueGuia}
 
-      <p>Si tienes cualquier duda con el pedido, escríbeme directamente
-      respondiendo a este correo.</p>
+      <p>Si tienes cualquier duda, escríbeme directamente respondiendo a este correo.</p>
 
       <p style="margin-top:28px;">Un saludo,<br>[TU NOMBRE]</p>
     </div>
