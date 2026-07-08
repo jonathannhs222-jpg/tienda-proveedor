@@ -6,7 +6,6 @@ require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
 const Stripe = require("stripe");
-const nodemailer = require("nodemailer");
 const paypal = require("@paypal/checkout-server-sdk");
 
 const app = express();
@@ -187,17 +186,7 @@ app.post("/capturar-orden-paypal/:orderID", async (req, res) => {
   }
 });
 
-// ---------- EMAIL AUTOMÁTICO (Gmail) ----------
-const transporter = nodemailer.createTransport({
-  host: "smtp.gmail.com",
-  port: 587,
-  secure: false, // usa STARTTLS en vez de SSL directo (más fiable en algunos hostings)
-  auth: {
-    user: process.env.GMAIL_USER,        // tu-correo@gmail.com
-    pass: process.env.GMAIL_APP_PASSWORD, // contraseña de aplicación (no tu contraseña normal)
-  },
-  connectionTimeout: 20000, // 20s en vez del valor por defecto, más margen
-});
+// ---------- EMAIL AUTOMÁTICO (Brevo) ----------
 
 async function enviarEmailGracias(destinatario, claveProducto = "proveedor") {
   const producto = obtenerProducto(claveProducto);
@@ -235,12 +224,32 @@ async function enviarEmailGracias(destinatario, claveProducto = "proveedor") {
     </div>
   `;
 
-  await transporter.sendMail({
-    from: `"[TU MARCA]" <${process.env.GMAIL_USER}>`,
-    to: destinatario,
-    subject: "Tu acceso al proveedor — gracias por tu compra",
-    html,
+  await enviarConBrevo(destinatario, "Tu acceso al proveedor — gracias por tu compra", html);
+}
+
+// Envía el email a través de la API HTTP de Brevo (https://api.brevo.com).
+// Usamos HTTP en vez de SMTP porque muchos hostings gratuitos (Render incluido)
+// bloquean las conexiones salientes por los puertos de correo tradicionales.
+async function enviarConBrevo(destinatario, asunto, html) {
+  const respuesta = await fetch("https://api.brevo.com/v3/smtp/email", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Accept: "application/json",
+      "api-key": process.env.BREVO_API_KEY,
+    },
+    body: JSON.stringify({
+      sender: { name: "SneakerSource", email: process.env.GMAIL_USER },
+      to: [{ email: destinatario }],
+      subject: asunto,
+      htmlContent: html,
+    }),
   });
+
+  if (!respuesta.ok) {
+    const detalle = await respuesta.text();
+    throw new Error(`Brevo respondió ${respuesta.status}: ${detalle}`);
+  }
 }
 
 const PORT = process.env.PORT || 3000;
