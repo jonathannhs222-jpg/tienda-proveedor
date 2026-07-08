@@ -11,6 +11,15 @@ const paypal = require("@paypal/checkout-server-sdk");
 
 const app = express();
 
+// Red de seguridad: si algo falla en cualquier punto de forma inesperada,
+// lo registramos en los logs pero NO dejamos que tumbe el servidor entero.
+process.on("unhandledRejection", (reason) => {
+  console.error("Promesa no controlada:", reason);
+});
+process.on("uncaughtException", (err) => {
+  console.error("Excepción no controlada:", err);
+});
+
 // Stripe necesita el body "raw" SOLO en la ruta del webhook,
 // por eso esa ruta se declara antes de app.use(express.json())
 const stripe = Stripe(process.env.STRIPE_SECRET_KEY);
@@ -36,7 +45,13 @@ app.post(
       const emailCliente = session.customer_details?.email;
       const producto = session.metadata?.producto || "proveedor";
       if (emailCliente) {
-        await enviarEmailGracias(emailCliente, producto);
+        try {
+          await enviarEmailGracias(emailCliente, producto);
+        } catch (errEmail) {
+          console.error("No se pudo enviar el email de agradecimiento:", errEmail);
+          // No relanzamos el error: el pago ya está confirmado, no queremos
+          // que un fallo de email tumbe el servidor ni afecte a Stripe.
+        }
       }
     }
 
@@ -159,7 +174,11 @@ app.post("/capturar-orden-paypal/:orderID", async (req, res) => {
       capture.result.purchase_units?.[0]?.custom_id || "proveedor";
 
     if (status === "COMPLETED" && emailCliente) {
-      await enviarEmailGracias(emailCliente, claveProducto);
+      try {
+        await enviarEmailGracias(emailCliente, claveProducto);
+      } catch (errEmail) {
+        console.error("No se pudo enviar el email de agradecimiento:", errEmail);
+      }
     }
     res.json({ status });
   } catch (err) {
@@ -170,11 +189,14 @@ app.post("/capturar-orden-paypal/:orderID", async (req, res) => {
 
 // ---------- EMAIL AUTOMÁTICO (Gmail) ----------
 const transporter = nodemailer.createTransport({
-  service: "gmail",
+  host: "smtp.gmail.com",
+  port: 587,
+  secure: false, // usa STARTTLS en vez de SSL directo (más fiable en algunos hostings)
   auth: {
     user: process.env.GMAIL_USER,        // tu-correo@gmail.com
     pass: process.env.GMAIL_APP_PASSWORD, // contraseña de aplicación (no tu contraseña normal)
   },
+  connectionTimeout: 20000, // 20s en vez del valor por defecto, más margen
 });
 
 async function enviarEmailGracias(destinatario, claveProducto = "proveedor") {
