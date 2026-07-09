@@ -80,7 +80,7 @@ const PRODUCTOS = {
   proveedor: {
     nombre: "Proveedor Zapatillas China — Acceso Directo",
     descripcion: "Catálogo, tarifas mayorista/unidad y contacto directo del proveedor",
-    precioCentimos: 1700, // 17,00 €
+    precioCentimos: 1500, // 15,00 €
     moneda: "eur",
     incluyeProveedor: true,
     incluyeGuia: false,
@@ -88,7 +88,7 @@ const PRODUCTOS = {
   guia: {
     nombre: "Guía de Reventa de Zapatillas",
     descripcion: "Guía completa paso a paso para revender con margen",
-    precioCentimos: 1400, // 14,00 €
+    precioCentimos: 1000, // 10,00 €
     moneda: "eur",
     incluyeProveedor: false,
     incluyeGuia: true,
@@ -96,7 +96,7 @@ const PRODUCTOS = {
   pack: {
     nombre: "Proveedor Zapatillas China + Guía de Reventa",
     descripcion: "Todo lo del acceso al proveedor, más la guía completa para revender con margen",
-    precioCentimos: 2700, // 27,00 €
+    precioCentimos: 2000, // 20,00 €
     moneda: "eur",
     incluyeProveedor: true,
     incluyeGuia: true,
@@ -137,7 +137,6 @@ app.post("/crear-sesion-stripe", async (req, res) => {
     res.status(500).json({ error: "No se pudo crear la sesión de pago" });
   }
 });
-
 
 // ---------- PAYPAL: cliente ----------
 function clientePaypal() {
@@ -249,16 +248,36 @@ async function enviarEmailGracias(destinatario, claveProducto = "proveedor") {
     : "Aquí tienes todo lo incluido en tu compra:";
 
   const html = `
-    <div style="font-family:Arial,sans-serif; max-width:520px; margin:auto; color:#222;">
-      <h2 style="color:#c07a1f;">¡Gracias por tu compra!</h2>
-      <p>Ya tienes acceso a <b>${producto.nombre}</b>. ${intro}</p>
+    <div style="background:#f2f1f5; padding:28px 14px; font-family:Arial,Helvetica,sans-serif;">
+      <div style="max-width:560px; margin:auto; background:#ffffff; border-radius:14px; overflow:hidden; box-shadow:0 10px 30px rgba(0,0,0,0.08);">
 
-      ${bloqueProveedor}
-      ${bloqueGuia}
+        <!-- Cabecera negra con acento rojo -->
+        <div style="background:#0A0A0C; padding:30px 24px 26px; text-align:center; border-bottom:3px solid #FF3B3B;">
+          <div style="font-family:Georgia,'Times New Roman',serif; font-size:26px; font-weight:bold; color:#ffffff; letter-spacing:0.5px;">
+            JHS<span style="color:#FF3B3B;"> Resell</span>
+          </div>
+          <div style="color:#9A93A0; font-size:12px; margin-top:6px;">Proveedor + Guía de reventa</div>
+        </div>
 
-      <p>Si tienes cualquier duda, escríbeme directamente respondiendo a este correo.</p>
+        <!-- Cuerpo -->
+        <div style="padding:30px 28px; color:#222; line-height:1.6;">
+          <h2 style="color:#FF3B3B; margin:0 0 14px; font-size:22px;">¡Gracias por tu compra!</h2>
+          <p style="margin:0 0 8px;">Ya tienes acceso a <b>${producto.nombre}</b>. ${intro}</p>
 
-      <p style="margin-top:28px;">Un saludo,<br>[TU NOMBRE]</p>
+          ${bloqueProveedor}
+          ${bloqueGuia}
+
+          <p style="margin:18px 0 0;">Si tienes cualquier duda, escríbeme directamente respondiendo a este correo.</p>
+
+          <p style="margin-top:28px;">Un saludo,<br><b style="color:#0A0A0C;">JHS</b><b style="color:#FF3B3B;"> Resell</b></p>
+        </div>
+
+        <!-- Pie negro -->
+        <div style="background:#0A0A0C; padding:16px 24px; text-align:center;">
+          <div style="color:#9A93A0; font-size:11px;">© JHS Resell · Acceso directo a fábrica en China</div>
+        </div>
+
+      </div>
     </div>
   `;
 
@@ -278,7 +297,7 @@ async function enviarEmailGracias(destinatario, claveProducto = "proveedor") {
 // bloquean las conexiones salientes por los puertos de correo tradicionales.
 async function enviarConBrevo(destinatario, asunto, html, adjuntos = []) {
   const cuerpo = {
-    sender: { name: "SneakerSource", email: process.env.GMAIL_USER },
+    sender: { name: "JHS Resell", email: process.env.GMAIL_USER },
     to: [{ email: destinatario }],
     subject: asunto,
     htmlContent: html,
