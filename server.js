@@ -3,12 +3,25 @@
 // envía automáticamente el email de "gracias + contacto del proveedor" por Gmail.
 
 require("dotenv").config();
+const fs = require("fs");
+const path = require("path");
 const express = require("express");
 const cors = require("cors");
 const Stripe = require("stripe");
 const paypal = require("@paypal/checkout-server-sdk");
 
 const app = express();
+
+// Cargamos la guía en PDF una sola vez al arrancar el servidor, en base64,
+// para poder adjuntarla en los emails sin leer el archivo en cada petición.
+let GUIA_PDF_BASE64 = null;
+try {
+  GUIA_PDF_BASE64 = fs
+    .readFileSync(path.join(__dirname, "guia-reventa.pdf"))
+    .toString("base64");
+} catch (err) {
+  console.error("No se pudo cargar guia-reventa.pdf:", err.message);
+}
 
 // Red de seguridad: si algo falla en cualquier punto de forma inesperada,
 // lo registramos en los logs pero NO dejamos que tumbe el servidor entero.
@@ -249,13 +262,31 @@ async function enviarEmailGracias(destinatario, claveProducto = "proveedor") {
     </div>
   `;
 
-  await enviarConBrevo(destinatario, "Tu acceso al proveedor — gracias por tu compra", html);
+  const adjuntos = [];
+  if (producto.incluyeGuia && GUIA_PDF_BASE64) {
+    adjuntos.push({
+      content: GUIA_PDF_BASE64,
+      name: "Guia-PRO-Reventa-Zapatillas.pdf",
+    });
+  }
+
+  await enviarConBrevo(destinatario, "Tu acceso al proveedor — gracias por tu compra", html, adjuntos);
 }
 
 // Envía el email a través de la API HTTP de Brevo (https://api.brevo.com).
 // Usamos HTTP en vez de SMTP porque muchos hostings gratuitos (Render incluido)
 // bloquean las conexiones salientes por los puertos de correo tradicionales.
-async function enviarConBrevo(destinatario, asunto, html) {
+async function enviarConBrevo(destinatario, asunto, html, adjuntos = []) {
+  const cuerpo = {
+    sender: { name: "SneakerSource", email: process.env.GMAIL_USER },
+    to: [{ email: destinatario }],
+    subject: asunto,
+    htmlContent: html,
+  };
+  if (adjuntos.length > 0) {
+    cuerpo.attachment = adjuntos;
+  }
+
   const respuesta = await fetch("https://api.brevo.com/v3/smtp/email", {
     method: "POST",
     headers: {
@@ -263,12 +294,7 @@ async function enviarConBrevo(destinatario, asunto, html) {
       Accept: "application/json",
       "api-key": process.env.BREVO_API_KEY,
     },
-    body: JSON.stringify({
-      sender: { name: "SneakerSource", email: process.env.GMAIL_USER },
-      to: [{ email: destinatario }],
-      subject: asunto,
-      htmlContent: html,
-    }),
+    body: JSON.stringify(cuerpo),
   });
 
   if (!respuesta.ok) {
