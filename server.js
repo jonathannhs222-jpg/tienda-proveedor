@@ -55,10 +55,11 @@ app.post(
     if (event.type === "checkout.session.completed") {
       const session = event.data.object;
       const emailCliente = session.customer_details?.email;
+      const nombreCliente = session.customer_details?.name || "";
       const producto = session.metadata?.producto || "proveedor";
       if (emailCliente) {
         try {
-          await enviarEmailGracias(emailCliente, producto);
+          await enviarEmailGracias(emailCliente, producto, nombreCliente);
         } catch (errEmail) {
           console.error("No se pudo enviar el email de agradecimiento:", errEmail);
           // No relanzamos el error: el pago ya está confirmado, no queremos
@@ -94,7 +95,7 @@ const PRODUCTOS = {
     incluyeGuia: true,
   },
   pack: {
-    nombre: "Proveedor Zapatillas China + Guía de Reventa",
+    nombre: "Proveedor de Zapatillas + Guía PRO de Reventa",
     descripcion: "Todo lo del acceso al proveedor, más la guía completa para revender con margen",
     precioCentimos: 2000, // 20,00 €
     moneda: "eur",
@@ -114,6 +115,7 @@ app.post("/crear-sesion-stripe", async (req, res) => {
     const session = await stripe.checkout.sessions.create({
       mode: "payment",
       payment_method_types: ["card"],
+      billing_address_collection: "required",
       line_items: [
         {
           price_data: {
@@ -191,12 +193,18 @@ app.post("/capturar-orden-paypal/:orderID", async (req, res) => {
     const capture = await clientePaypal().execute(request);
     const status = capture.result.status;
     const emailCliente = capture.result.payer?.email_address;
+    const nombreCliente = [
+      capture.result.payer?.name?.given_name,
+      capture.result.payer?.name?.surname,
+    ]
+      .filter(Boolean)
+      .join(" ");
     const claveProducto =
       capture.result.purchase_units?.[0]?.custom_id || "proveedor";
 
     if (status === "COMPLETED" && emailCliente) {
       try {
-        await enviarEmailGracias(emailCliente, claveProducto);
+        await enviarEmailGracias(emailCliente, claveProducto, nombreCliente);
       } catch (errEmail) {
         console.error("No se pudo enviar el email de agradecimiento:", errEmail);
       }
@@ -210,8 +218,9 @@ app.post("/capturar-orden-paypal/:orderID", async (req, res) => {
 
 // ---------- EMAIL AUTOMÁTICO (Brevo) ----------
 
-async function enviarEmailGracias(destinatario, claveProducto = "proveedor") {
+async function enviarEmailGracias(destinatario, claveProducto = "proveedor", nombreCliente = "") {
   const producto = obtenerProducto(claveProducto);
+  const saludo = nombreCliente ? `Hola ${nombreCliente}, ya` : "Ya";
 
   // Número del proveedor y mensaje que aparecerá ya escrito al abrir el chat.
   const numeroProveedor = "8613159459186"; // +86 131 5945 9186, sin "+" ni espacios
@@ -262,7 +271,7 @@ async function enviarEmailGracias(destinatario, claveProducto = "proveedor") {
         <!-- Cuerpo -->
         <div style="padding:30px 28px; color:#222; line-height:1.6;">
           <h2 style="color:#FF3B3B; margin:0 0 14px; font-size:22px;">¡Gracias por tu compra!</h2>
-          <p style="margin:0 0 8px;">Ya tienes acceso a <b>${producto.nombre}</b>. ${intro}</p>
+          <p style="margin:0 0 8px;">${saludo} tienes acceso a <b>${producto.nombre}</b>. ${intro}</p>
 
           ${bloqueProveedor}
           ${bloqueGuia}
