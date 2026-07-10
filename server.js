@@ -85,6 +85,28 @@ const PRODUCTOS = {
     moneda: "eur",
     incluyeProveedor: true,
     incluyeGuia: false,
+    numeroProveedor: "8613159459186", // +86 131 5945 9186
+    mensajeProveedor: "Hola buenas, vengo de parte de Jonathan, me gustaría comprar algún producto.",
+  },
+  perfumes: {
+    nombre: "Proveedor Perfumes — Acceso Directo",
+    descripcion: "Catálogo, tarifas mayorista/unidad y contacto directo del proveedor de perfumes",
+    precioCentimos: 1200, // 12,00 €
+    moneda: "eur",
+    incluyeProveedor: true,
+    incluyeGuia: false,
+    numeroProveedor: "8618707529036", // +86 187 0752 9036
+    mensajeProveedor: "Hola buenas, vengo de parte de Jonathan, me gustaría comprar algún perfume.",
+  },
+  tecnologia: {
+    nombre: "Proveedor Tecnología — Acceso Directo",
+    descripcion: "Catálogo, tarifas mayorista/unidad y contacto directo del proveedor de tecnología",
+    precioCentimos: 1400, // 14,00 €
+    moneda: "eur",
+    incluyeProveedor: true,
+    incluyeGuia: false,
+    numeroProveedor: "8618707529036", // +86 187 0752 9036
+    mensajeProveedor: "Hola buenas, vengo de parte de Jonathan, me gustaría comprar algún producto de tecnología.",
   },
   guia: {
     nombre: "Guía de Reventa de Zapatillas",
@@ -101,6 +123,8 @@ const PRODUCTOS = {
     moneda: "eur",
     incluyeProveedor: true,
     incluyeGuia: true,
+    numeroProveedor: "8613159459186", // +86 131 5945 9186
+    mensajeProveedor: "Hola buenas, vengo de parte de Jonathan, me gustaría comprar algún producto.",
   },
 };
 
@@ -223,9 +247,12 @@ async function enviarEmailGracias(destinatario, claveProducto = "proveedor", nom
   const saludo = nombreCliente ? `Hola ${nombreCliente}, ya` : "Ya";
 
   // Número del proveedor y mensaje que aparecerá ya escrito al abrir el chat.
-  const numeroProveedor = "8613159459186"; // +86 131 5945 9186, sin "+" ni espacios
+  // Cada producto tiene su propio proveedor/número (definido en PRODUCTOS),
+  // así que el enlace de WhatsApp cambia según lo que se haya comprado.
+  const numeroProveedor = producto.numeroProveedor || "8613159459186";
   const mensajePrecargado = encodeURIComponent(
-    "Hola buenas, vengo de parte de Jonathan, me gustaría comprar algún producto."
+    producto.mensajeProveedor ||
+      "Hola buenas, vengo de parte de Jonathan, me gustaría comprar algún producto."
   );
   const enlaceWhatsapp = `https://wa.me/${numeroProveedor}?text=${mensajePrecargado}`;
 
